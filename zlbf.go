@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 )
 
@@ -35,14 +36,168 @@ func main() {
 	reader := bufio.NewReader(os.Stdin)
 	//setHashFilePath(reader)
 	//setBackupTime(reader)
+	setBackupFilePathMap(reader)
+	backup()
+}
+
+func backup() {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("backup模块出错")
+		}
+	}()
+
+	var targetPath string
+	var partPath string
+
+	for key, value := range backupFilePathMap {
+		targetPath = ""
+		filepath.Walk(key, func(path string, f os.FileInfo, err error) error {
+			partPath, _ = filepath.Rel(key, path)
+			targetPath = filepath.Join(value, partPath)
+
+			return nil
+		})
+	}
+}
+
+func copyFile(basePath, targetPath string) {
+	defer func() {
+		if err_p := recover(); err_p != nil {
+			fmt.Println("copyFile模块出错")
+		}
+	}()
+
+	baseStat, err := os.Stat(basePath)
+	if err != nil {
+		log.Panicln("需要备份的文件检测失败，文件出现问题，无法复制")
+		return
+	}
+	targetStat, err := os.Stat(targetPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			//如果目标文件不存在
+			if baseStat.IsDir() {
+				//如果缺失的是一个空目录
+				errMkDir := os.MkdirAll(targetPath, 0777)
+				if errMkDir != nil {
+					log.Println("创建目录 " + targetPath + " 失败")
+				}
+			} else {
+				//如果缺失的是一个文件
+
+			}
+		} else {
+			return
+		}
+	} else {
+		//如果目标文件存在
+		if baseStat.IsDir() {
+			//如果是一个空目录
+		} else {
+			//如果是一个文件
+
+		}
+	}
+
+}
+
+func copyFileContent(basePath, targetPath string) {
+	defer func() {
+		if err_p := recover(); err_p != nil {
+			fmt.Println("copyFileContent模块出错")
+		}
+	}()
+
+	baseFile, err := os.Open(basePath)
+	if err != nil {
+		log.Println("读取文件 " + basePath + " 失败")
+		return
+	}
+	defer func() {
+		err := baseFile.Close()
+		if err != nil {
+			log.Println("close文件 " + basePath + " 失败： " + err.Error())
+		}
+	}()
+	targetFile, err := os.Create(targetPath)
+	if err != nil {
+		log.Println("创建文件 " + targetPath + " 失败： " + err.Error())
+		return
+	}
+	defer func() {
+		err := targetFile.Close()
+		if err != nil {
+			log.Println("close文件 " + targetPath + " 失败： " + err.Error())
+		}
+	}()
+	copyData, err := io.Copy(targetFile, baseFile)
+	if err != nil {
+		log.Println("复制文件文件 " + basePath + " 失败： " + err.Error())
+	}
+	fmt.Println("正在复制文件： " + backup_path + " 大小为： " + strconv.FormatInt(copyData, 10))
 }
 
 func setBackupFilePathMap(reader *bufio.Reader) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("setBackupFilePathMap模块出错")
+		}
+	}()
+
 	backupFilePathMap = make(map[string]string)
 	var inputKey []byte
 	var inputValue []byte
-
+	var key string
+	var value string
+	var errInput error
+	var count int64 = 0
 	log.Println(`输入exit为结束当前命令行，并开始备份，windows目录中的“/”，请用“//”表示,如果备份目录的话目录的最后需要加上目录间隔符`)
+
+	for {
+		inputKey = []byte{}
+		inputValue = []byte{}
+		key = ""
+		value = ""
+		count++
+		log.Println("请输第【" + strconv.FormatInt(count, 10) + "】组数据：")
+
+		for len(inputKey) == 0 {
+			log.Println("请输入要备份的目录,回车结束：")
+			inputKey, _, errInput = reader.ReadLine()
+			if len(inputKey) == 0 {
+				log.Println("您未输入任何内容")
+				inputKey = []byte{}
+			}
+			if errInput != nil {
+				log.Println("读取输入错误：" + errInput.Error())
+				inputKey = []byte{}
+			}
+		}
+		key = string(inputKey)
+		if (key == "exit") || (key == "EXIT") {
+			break
+		}
+
+		for len(inputValue) == 0 {
+			log.Println("请输入备份文件存放目录,回车结束：")
+			inputValue, _, errInput = reader.ReadLine()
+			if len(inputValue) == 0 {
+				log.Println("您未输入任何内容")
+				inputValue = []byte{}
+			}
+			if errInput != nil {
+				log.Println("读取输入错误：" + errInput.Error())
+				inputValue = []byte{}
+			}
+		}
+		value = string(inputValue)
+		if (string(inputValue) == "exit") || (string(inputValue) == "EXIT") {
+			break
+		}
+
+		backupFilePathMap[key] = value
+	}
 }
 
 func setFristBackupTime(reader *bufio.Reader) {
