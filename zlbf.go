@@ -5,12 +5,16 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 )
 
-//指纹集合文件存放目录
+//指纹集合文件存放目录 【暂时不需要，文件存储在与执行文件相同的目录】
 var hashFilePath string
+
+//指纹集合文件名称
+var hashFileName string = "hash.zlbf"
 
 //是否单独设置首次备份执行时间
 var isDoFrist string
@@ -24,6 +28,8 @@ var doFristTimeSec int = -1
 var doTimeHour int = -1
 var doTimeMin int = -1
 var doTimeSec int = -1
+
+var md5FilePath string
 
 /*
 备份文件目录存放 map
@@ -96,12 +102,105 @@ func copyFile(basePath, targetPath string) {
 			//如果是一个空目录
 		} else {
 			//如果是一个文件
-
+			//			if !compareMd5(basePath, targetPath) {
+			//				//验证文件指纹是否相同，不相同则执行备份
+			//				copyFileContent(basePath, targetPath)
+			//			}
 		}
 	}
 
 }
 
+//获取文件当前执行路径
+func getCurrentPath() string {
+	defer func() {
+		if err_p := recover(); err_p != nil {
+			fmt.Println("getCurrentPath模块出错")
+		}
+	}()
+
+	commandFile, err := exec.LookPath(os.Args[0])
+	if err != nil {
+		log.Println("获取当前执行文件命令行失败： " + err.Error())
+	}
+	absFile, err := filepath.Abs(commandFile)
+	if err != nil {
+		log.Println("获取当前执行文件abs路径失败： " + err.Error())
+	}
+	absPath := filepath.Dir(absFile)
+	return absPath
+}
+
+//创建指纹文件
+func createHashFile() *os.File {
+	filePath := filepath.Join(getCurrentPath(), hashFileName)
+	file, err := os.Create(filePath)
+	if err != nil {
+		log.Println("创建文件 " + targetPath + " 失败： " + err.Error())
+	}
+	return file
+	//	defer func() {
+	//		err := file.Close()
+	//		if err != nil {
+	//			log.Println("close文件 " + targetPath + " 失败： " + err.Error())
+	//		}
+	//	}()
+}
+
+//对比md5是否相同
+func compareFileMd5(filepath1, filepath2 string) bool {
+	defer func() {
+		if err_p := recover(); err_p != nil {
+			fmt.Println("compareMd5模块出错")
+		}
+	}()
+
+	m1 := makeFileMd5(filepath1)
+	m2 := makeFileMd5(filepath2)
+	if m1 == m2 {
+		return true
+	}
+	return false
+}
+
+func isFileUpdate(fliePath, md5 string) bool {
+	defer func() {
+		if err_p := recover(); err_p != nil {
+			fmt.Println("isFileUpdate模块出错")
+		}
+	}()
+
+}
+
+//生成文件md5
+func makeFileMd5(filepath string) string {
+	defer func() {
+		if err_p := recover(); err_p != nil {
+			fmt.Println("makeFileMd5模块出错")
+		}
+	}()
+
+	hash := md5.New()
+	file, err := os.Open(filePath)
+	if err != nil {
+		log.Println("打开文件 " + filePath + " 准备验证MD5失败： " + err.Error())
+	}
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			log.Println("close文件 " + basePath + " 失败： " + err.Error())
+		}
+	}()
+
+	_, err = io.Copy(hash, file)
+	if err != nil {
+		log.Println("准备读取" + filePath + "文件内容验证md5失败： " + err.Error())
+	}
+	md5 := hex.EncodeToString(hash.Sum(nil))
+	return md5
+}
+
+//复制文件内容
 func copyFileContent(basePath, targetPath string) {
 	defer func() {
 		if err_p := recover(); err_p != nil {
@@ -138,6 +237,7 @@ func copyFileContent(basePath, targetPath string) {
 	fmt.Println("正在复制文件： " + backup_path + " 大小为： " + strconv.FormatInt(copyData, 10))
 }
 
+//设置备份文件
 func setBackupFilePathMap(reader *bufio.Reader) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -200,6 +300,7 @@ func setBackupFilePathMap(reader *bufio.Reader) {
 	}
 }
 
+//设置首次备份时间
 func setFristBackupTime(reader *bufio.Reader) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -270,6 +371,7 @@ func setFristBackupTime(reader *bufio.Reader) {
 	}
 }
 
+//设置日常执行备份时间
 func setNormalBackupTime(reader *bufio.Reader) {
 	defer func() {
 		if err := recover(); err != nil {
