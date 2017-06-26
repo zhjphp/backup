@@ -203,7 +203,7 @@ func makeFileMd5(filepath string) string {
 //复制文件内容
 func copyFileContent(basePath, targetPath string) {
 	defer func() {
-		if err_p := recover(); err_p != nil {
+		if err := recover(); err != nil {
 			fmt.Println("copyFileContent模块出错")
 		}
 	}()
