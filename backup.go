@@ -288,12 +288,7 @@ func readFileContent() *map[string]string {
 	jsonContent, err := ioutil.ReadAll(file)
 
 	if err != nil {
-		log.Println("错误json:")
-		log.Println(jsonContent)
 		log.Println("读取指纹文件内容错误： " + err.Error())
-	} else {
-		log.Println("正确json:")
-		log.Println(jsonContent)
 	}
 	content := make(map[string]string)
 	err = json.Unmarshal(jsonContent, &content)
